@@ -1,1 +1,7 @@
-code to regenerate figures
+# Generating figures
+This directory includes all of the data and code to replicate the figures presented in Martin & Koelle 2021 which is a Technical Comment in response to Popa & Genger et al. Science Translational Medicine 2020. This directory includes the following scripts:
+
+```
+format_metadata.py
+```
+This is a fairly simply Python3 script which formats the various supplementary metadata files from Popa & Genger et al. into a single csv file. It is set up to be run from this directory (`sarscov2_nb_reanalysis/figures`) and expects the `data/abe2555_Data_file_S1_SampleInformation.csv`, `'data/abe2555_Data_file_S5.csv`, and `data/abe2555_Data_file_S4.csv` files as input (available at https://stm.sciencemag.org/content/12/573/eabe2555/tab-figures-data) and requires Pandas to be installed. 
