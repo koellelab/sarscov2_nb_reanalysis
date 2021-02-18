@@ -163,7 +163,7 @@ def plot_nb_estimates(ax, nb_dat=None, realign_vcf_dat=None):
             color='#5E81AC', size=15,
             transform=ax.transAxes)
     ax.set_xlabel('max. donor AF')
-    ax.set_ylabel('bottleneck estimate')
+    ax.set_ylabel('bottleneck size')
     ax.set_yscale('log')
     ax.set_aspect(1./ax.get_data_ratio())
     return(ax)
@@ -414,7 +414,7 @@ def generate_random_pairs(transmission_pairs=None, family_dat=None):
     pd.DataFrame(non_pairs).to_csv('data/random_pairs.csv', header=None, index=None)
 
 
-def plot_prob_transmission(ax, vcf_dat=None, transmission_pairs=None, random_pairs=None, family_dat=None, min_af=0.0):
+def plot_prob_transmission(ax, vcf_dat=None, transmission_pairs=None, random_pairs=None, min_af=0.0):
     def calc_prop_transmitted_binned(samples, bins, min_af=0.0):
         # each bin includes the data at that bin value and
         # up until the next
@@ -477,7 +477,7 @@ def plot_prob_transmission(ax, vcf_dat=None, transmission_pairs=None, random_pai
         [t.set_bbox(dict(facecolor='white', 
             alpha=0.5, pad=0, edgecolor='none')) for t in [t1,t2]]
     ax.set_xlabel('donor AF')
-    ax.set_ylabel('prob. of transmission')
+    ax.set_ylabel('prob. variant is shared')
     ax.set_aspect(1./ax.get_data_ratio())
     return(ax)
 
@@ -610,6 +610,110 @@ def plot_var_abundance(vcf_dat=None, transmission_pairs=None, min_af=0.0, min_ab
     fig.savefig('figures/figure_s3.pdf')
 
 
+def plot_nb_by_pair(nb_dat=None, family_dat=None):
+    labels = ['1% cutoff', '3% cutoff', '6% cutoff']
+    family_cols = {3: '#829870', 5: '#D08770', 11: '#333333', 
+        8: '#BCBB8F', 'A/AL': '#ebcb8b', 6: '#88C0D0', 1: '#bb8fbc',
+        10: '#957296', 7: '#5E81AC', 9: '#9a8067', 2: '#bca26f', 4: '#a3be8c'}
+    pair_family_dat = {}
+    for idx, row in nb_dat.iterrows():
+        if family_dat[row['donor']] == family_dat[row['recipient']]:
+            pair_family_dat[row['pair']] = family_dat[row['donor']]
+        else:
+            pair_family_dat[row['pair']] = 'A/AL'
+    # doing this manually because dates in Fig5A are different
+    # from sampling dates
+    x_axis_order = [('CoV_003', 'CoV_143'), ('CoV_003', 'CoV_146'), 
+        ('CoV_146', 'CoV_147'), ('CoV_146', 'CoV_172'), ('CoV_146', 'CoV_157'), 
+        ('CoV_146', 'CoV_159'), ('CoV_146', 'CoV_150'), ('CoV_146', 'CoV_1056'), 
+        ('CoV_159', 'CoV_168'), ('CoV_159', 'CoV_169'), ('CoV_150', 'CoV_162'), 
+        ('CoV_162', 'CoV_161'), 
+        ('CoV_1056', 'CoV_166'), 
+        ('CoV_1056', 'CoV_176'),
+        ('CoV_1056', 'CoV_171'),
+        ('CoV_1056', 'CoV_1057'), 
+        ('CoV_1056', 'CoV_1067'), 
+        ('CoV_171', 'CoV_180'), 
+        ('CoV_180', 'CoV_197'), 
+        ('CoV_1067', 'CoV_183'),
+        ('CoV_1057', 'CoV_175'), 
+        ('CoV_1057', 'CoV_177'), 
+        ('CoV_1057', 'CoV_1058'), 
+        ('CoV_1057', 'CoV_187'), 
+        ('CoV_1058', 'CoV_1059'), 
+        ('CoV_1058', 'CoV_1064'), 
+        ('CoV_1058', 'CoV_1063'), 
+        ('CoV_1059', 'CoV_1065'), 
+        ('CoV_1059', 'CoV_1062'), 
+        ('CoV_1062', 'CoV_218'), 
+        ('CoV_1062', 'CoV_219'), 
+        ('CoV_1062', 'CoV_217'), 
+        ('CoV_217', 'CoV_256'), 
+        ('CoV_187', 'CoV_1068'), 
+        ('CoV_194', 'CoV_193'), 
+        ('CoV_194', 'CoV_195'), 
+        ('CoV_194', 'CoV_196'),
+        ('CoV_198', 'CoV_230'), 
+        ('CoV_273', 'CoV_271')]
+    nb_dat = nb_dat.set_index('pair').loc[x_axis_order].reset_index()
+    fig, axs = plt.subplots(4, 1, figsize=(6.4*2, 4.8*3), 
+        constrained_layout=True, 
+        sharey=True,
+        gridspec_kw={'height_ratios':[0.07, 0.31, 0.31, 0.31]})
+    for nb_idx,nb in enumerate(['1%BottleneckSize', '3%BottleneckSize', '6%BottleneckSize']):
+        ax = axs[nb_idx+1]
+        for row_idx, row in nb_dat.iterrows():
+            # CI
+            _ = ax.plot([row_idx]*2,
+                [row[f'{nb}_lower95'], row[f'{nb}_upper95']], 
+                lw=1, color=family_cols[pair_family_dat[row['pair']]], zorder=2)
+            if pair_family_dat[row['pair']] in set([8, 'A/AL']):
+                # MLE
+                s1 = ax.scatter(row_idx,
+                    row[f'{nb}_mle'],
+                    color=family_cols[pair_family_dat[row['pair']]],
+                    edgecolor='#333333',
+                    zorder=3, s=75)
+            else:
+                 # MLE
+                s1 = ax.scatter(row_idx,
+                    row[f'{nb}_mle'],
+                    color=family_cols[pair_family_dat[row['pair']]],
+                    zorder=3, s=75, label=f'Family {pair_family_dat[row["pair"]]}')
+        ax.text(0.9,0.925,
+            labels[nb_idx], 
+            color='#333333', size=18,
+            transform=ax.transAxes)
+        ax.set_xticks(nb_dat.index)
+        ax.set_yscale('log')
+        if nb_idx == 1:
+            ax.set_ylabel('bottleneck size', size=18)
+        if nb_idx != len(axs)-2:
+            ax.set_xticklabels([])
+        else:    
+            x_ticklabels = ax.get_xticks()
+            ax.set_xticklabels([f'{nb_dat.iloc[i,:]["donor"]} -> {nb_dat.iloc[i,:]["recipient"]}' \
+                for i in x_ticklabels], rotation=45, size=9, ha='right')
+            ax.set_xlabel('donor recipient pair', size=18)
+            ax.set_xlim(-1, nb_dat.index[-1]+1)
+        ax.text(-0.075, 1.0, string.ascii_lowercase[nb_idx], transform=ax.transAxes, 
+                    size=20, weight='bold')
+    for key, value in family_cols.items():
+        if type(key) != str:
+            if key == 8:
+                axs[0].scatter(0,0, color=value, edgecolor='#333333', 
+                    label=f'Family {key}', s=100)
+            else:
+                axs[0].scatter(0,0, color=value,
+                    label=f'Family {key}', s=100)
+        else:
+            axs[0].scatter(0,0, color=value, label=f'Cluster {key}', s=100)
+    axs[0].legend(ncol=6, loc='center', prop={'size': 16}, frameon=False)
+    axs[0].set_frame_on(False)
+    axs[0].get_xaxis().set_visible(False)
+    axs[0].get_yaxis().set_visible(False)
+    fig.savefig('figures/figure_s4.pdf') 
+    
 
 def figure_1(nb_dat=None, realign_vcf_dat=None, vcf_dat=None, transmission_pairs=None, 
     family_dat=None, ct_dat=None, simulated_data=None, highlight_pair=None):
@@ -625,21 +729,21 @@ def figure_1(nb_dat=None, realign_vcf_dat=None, vcf_dat=None, transmission_pairs
         plot_snv_density_indiv(axs[0,2], density_vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, 
         kde_range=[0.01, 0.06])
     nb_dict = {i['pair']: i['1%BottleneckSize_mle'] for idx, i in nb_dat.iterrows()}
-    axs[1,0] = \
-        plot_multi_tv(axs[1,0], tv_vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, nb_dict=nb_dict,
-            simulated_data=simulated_data, lod=0.01, min_nb=1000)
     # if we haven't generated the random pairs yet, do that
     if not os.path.exists('data/random_pairs.csv'):
         generate_random_pairs(transmission_pairs=transmission_pairs, family_dat=family_dat)
     random_pairs = pd.read_csv('data/random_pairs.csv', header=None)
     random_pairs = {idx: (i[0], i[1]) for idx, i in random_pairs.iterrows()}
-    axs[1,1] = \
-        plot_prob_transmission(axs[1,1], vcf_dat=vcf_dat, 
+    axs[1,0] = \
+        plot_prob_transmission(axs[1,0], vcf_dat=vcf_dat, 
             transmission_pairs=transmission_pairs, 
             random_pairs=random_pairs, 
-            family_dat=family_dat, min_af=0.01)
+            min_af=0.01)
+    axs[1,1] = \
+        plot_shared_vars(axs[1,1], vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, n_plot=12, min_af=0.01)
     axs[1,2] = \
-        plot_shared_vars(axs[1,2], vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, n_plot=12, min_af=0.01)
+        plot_multi_tv(axs[1,2], tv_vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, nb_dict=nb_dict,
+            simulated_data=simulated_data, lod=0.01, min_nb=1000)
     for ax_idx, ax in enumerate(axs.flat):
         ax.text(-0.175, 1.0, string.ascii_lowercase[ax_idx], transform=ax.transAxes, 
                 size=20, weight='bold')
@@ -647,45 +751,23 @@ def figure_1(nb_dat=None, realign_vcf_dat=None, vcf_dat=None, transmission_pairs
     plt.close()
 
 
-def figure_2(nb_dat=None):
-    cols = ['#333333', '#D08770', '#5E81AC']
-    jitter = [-0.25, 0, 0.25]
-    fig, ax = plt.subplots(figsize=(6.4*2, 4.8), constrained_layout=True)
-    for row_idx, row in nb_dat.iterrows():
-        for nb_idx,nb in enumerate(['1%BottleneckSize', '3%BottleneckSize', '6%BottleneckSize']):
-            # CI
-            _ = ax.plot([row_idx-jitter[nb_idx]]*2,
-                [row[f'{nb}_lower95'], row[f'{nb}_upper95']], 
-                lw=1, color=cols[nb_idx], zorder=2)
-            # MLE
-            _ = ax.scatter(row_idx-jitter[nb_idx],
-                row[f'{nb}_mle'],
-                color=cols[nb_idx],
-                edgecolor='#333333', 
-                alpha=0.85, zorder=3)
-    ax.set_xticks(nb_dat.index)
-    x_ticklabels = ax.get_xticks()
-    ax.set_xticklabels([f'{nb_dat.iloc[i,:]["donor"]} -> {nb_dat.iloc[i,:]["recipient"]}' \
-        for i in x_ticklabels], rotation=45, size=8, ha='right')
-    t1 = ax.text(0.91,0.925,
-                '1% cutoff', 
-                color='#333333', size=15,
-                transform=ax.transAxes)
-    t2 = ax.text(0.91,0.86,
-            '3% cutoff', 
-            color='#D08770', size=15,
-            transform=ax.transAxes)
-    t3 = ax.text(0.91,0.795,
-            '6% cutoff', 
-            color='#5E81AC', size=15,
-            transform=ax.transAxes)
-    _ = \
-        [t.set_bbox(dict(facecolor='white', 
-            alpha=0.5, pad=0, edgecolor='none')) for t in [t1,t2, t3]]
-    ax.set_xlabel('transmission pair')
-    ax.set_ylabel('bottleneck esitmate')
-    fig.savefig('figures/figure2.pdf')
-
+def figure_2(overall_nb_dat=None):
+    fig, axs = plt.subplots(1,2, figsize=(6.4*1.5, 4.8), 
+        constrained_layout=True)
+    axs[0].bar(overall_nb_dat['nb'],
+        overall_nb_dat['p_nb_all'], color="#5E81AC", edgecolor='#333333')
+    axs[0].set_title('all transmission pairs\ndonor AF > 6%\n ')
+    axs[1].bar(overall_nb_dat['nb'],
+        overall_nb_dat['p_nb_lowct'], 
+        color="#5E81AC", edgecolor='#333333')
+    axs[1].set_title('high quality transmission pairs\ndonor AF > 6%\ndonor CT < 30')
+    for ax in axs:
+        ax.set_xlabel('transmission of $N_b$ virions')
+        ax.set_ylabel('probability')
+        ax.set_ylim(-0.039, 1.039)
+        ax.set_xlim(-0.39, 10.39)
+        ax.set_xticks([0,2,4,6,8,10])
+    fig.savefig('figures/figure_2.pdf')
 
 def run():
     parser = argparse.ArgumentParser()
@@ -697,13 +779,16 @@ def run():
         default='data/seq/*/*_filter_norm.vcf',
         help='directory with all vcf files')
     parser.add_argument('--vcfRealignDir', 
-        default='data/seq_realign/*/*_filter_norm.vcf',
+        default='data/seq_realign/*/*_lofreq_filter_norm.vcf',
         help='directory with realigned vcf files')
     parser.add_argument('--simulatedData', 
         default='data/stochastic_sims_6percent.csv',
         help='file with simulated nb data')
     parser.add_argument('--nbData', 
         default='data/Popa_new_Nb_estimates.csv',
+        help='file with reanalyzed nb data')
+    parser.add_argument('--nbDataOverall', 
+        default='data/Nb_overall_data.csv',
         help='file with reanalyzed nb data')
     parser.add_argument('--highlightPair',
         default=['CoV_162', 'CoV_161'],
@@ -720,6 +805,7 @@ def run():
     transmission_pairs = get_transmission_pairs(metadata)
     family_dat = {i['sample_name']: i['family'] for idx, i in metadata.iterrows()}
     ct_dat = {i['sample_name']: i['ct'] for idx, i in metadata.iterrows()}
+    metadata['date'] = pd.to_datetime(metadata['date'], format='%m/%d/%y', errors='coerce')
     # reads transmission pair VCF data (variants relative to wuhan) into a dictionary
     # process results
     vcf_dat = {}
@@ -727,6 +813,8 @@ def run():
         sample, sample_dat = \
             process_vcf(path, args.filterAllow)
         vcf_dat[sample] = sample_dat
+
+
     # reads transmission pair VCF data (variants relative to donor) into a dictionary
     # process results
     realign_vcf_dat = {}
@@ -735,6 +823,8 @@ def run():
         sample, sample_dat = \
             process_vcf(path, args.filterAllow)
         realign_vcf_dat[sample_ref] = sample_dat
+
+
     nb_dat = pd.read_csv(args.nbData)
     nb_dat['donor'] = \
         'CoV_' + nb_dat['donor'].astype(str).str.zfill(3)
@@ -747,13 +837,15 @@ def run():
         ct_dat=ct_dat, transmission_pairs=transmission_pairs, family_dat=family_dat, 
         simulated_data=simulated_data, highlight_pair=args.highlightPair)
     # //// Figure 2 ////
-    figure_2(nb_dat=nb_dat)
+    figure_2(overall_nb_dat=pd.read_csv(args.nbDataOverall))
     # //// Figure S1 ////
     plot_tv_all(vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, ct_dat=ct_dat)
     # //// Figure S2 ////
     plot_shared_vars_all(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01, min_abundance=3)
     # //// Figure S3 ////
     plot_var_abundance(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01)
+    # //// Figure S4 ////
+    plot_nb_by_pair(nb_dat=nb_dat, family_dat=family_dat)
 
 
 if __name__ == "__main__":
