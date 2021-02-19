@@ -9,6 +9,7 @@ import string
 import itertools
 import os
 
+# BOTTLENECK ESTIMATES AS FIGURE S1
 
 def plot_style(grey='#333333'):
     mpl.rcParams['font.family'] = 'sans-serif'
@@ -326,9 +327,12 @@ def plot_multi_tv(ax, tv_vcf_dat=None, transmission_pairs=None, nb_dict=None, si
 
 
 def plot_tv_all(vcf_dat=None, transmission_pairs=None, ct_dat=None, lod=0.01, min_af=0.0):
+    all_pair_idx = list(transmission_pairs.keys())
+    all_pair_idx.sort()
     from matplotlib.backends.backend_pdf import PdfPages
-    with PdfPages('figures/figure_s1.pdf') as pdf:
-        for pair_idx, pair in transmission_pairs.items():
+    with PdfPages('figures/figure_s2.pdf') as pdf:
+        for pair_idx in all_pair_idx:
+            pair = transmission_pairs[pair_idx]
             tv_plot_dat = \
                 get_pair_dat(vcf_dat[pair[0] + '_' + 
                         pair[0]], 
@@ -569,7 +573,7 @@ def plot_shared_vars_all(vcf_dat=None, transmission_pairs=None, min_af=0.0, min_
     ax.set_xlabel('variant', size=24)
     ax.set_ylabel('frequency', size=24)
     ax.set_yscale('log')
-    fig.savefig('figures/figure_s2.pdf')  
+    fig.savefig('figures/figure_s3.pdf')  
     plt.close()  
 
 
@@ -607,7 +611,7 @@ def plot_var_abundance(vcf_dat=None, transmission_pairs=None, min_af=0.0, min_ab
     ax.set_xlim(-4, vars_to_plot.index[-1]+4)
     ax.set_ylim(0,)
     ax.set_ylabel('abundance')
-    fig.savefig('figures/figure_s3.pdf')
+    fig.savefig('figures/figure_s4.pdf')
 
 
 def plot_nb_by_pair(nb_dat=None, family_dat=None):
@@ -712,7 +716,7 @@ def plot_nb_by_pair(nb_dat=None, family_dat=None):
     axs[0].set_frame_on(False)
     axs[0].get_xaxis().set_visible(False)
     axs[0].get_yaxis().set_visible(False)
-    fig.savefig('figures/figure_s4.pdf') 
+    fig.savefig('figures/figure_s1.pdf') 
     
 
 def figure_1(nb_dat=None, realign_vcf_dat=None, vcf_dat=None, transmission_pairs=None, 
@@ -752,22 +756,20 @@ def figure_1(nb_dat=None, realign_vcf_dat=None, vcf_dat=None, transmission_pairs
 
 
 def figure_2(overall_nb_dat=None):
-    fig, axs = plt.subplots(1,2, figsize=(6.4*1.5, 4.8), 
+    max_x = 10
+    plot_dat = overall_nb_dat[overall_nb_dat['nb'] <= max_x]
+    fig, ax = plt.subplots(1,1, figsize=(5, 4.8), 
         constrained_layout=True)
-    axs[0].bar(overall_nb_dat['nb'],
-        overall_nb_dat['p_nb_all'], color="#5E81AC", edgecolor='#333333')
-    axs[0].set_title('all transmission pairs\ndonor AF > 6%\n ')
-    axs[1].bar(overall_nb_dat['nb'],
-        overall_nb_dat['p_nb_lowct'], 
-        color="#5E81AC", edgecolor='#333333')
-    axs[1].set_title('high quality transmission pairs\ndonor AF > 6%\ndonor CT < 30')
-    for ax in axs:
-        ax.set_xlabel('transmission of $N_b$ virions')
-        ax.set_ylabel('probability')
-        ax.set_ylim(-0.039, 1.039)
-        ax.set_xlim(-0.39, 10.39)
-        ax.set_xticks([0,2,4,6,8,10])
+    ax.bar(plot_dat['nb'],
+        plot_dat['p_nb_all'], color="#5E81AC", edgecolor='#333333')
+    ax.set_title('all transmission pairs\ndonor AF > 6%\n ')
+    ax.set_xlabel('transmission of $N_b$ virions')
+    ax.set_ylabel('probability')
+    ax.set_ylim(-0.039, 1.039)
+    ax.set_xlim(-0.39, max_x+1+0.39)
+    ax.set_xticks([0,2,4,6,8,10])
     fig.savefig('figures/figure_2.pdf')
+
 
 def run():
     parser = argparse.ArgumentParser()
@@ -839,13 +841,14 @@ def run():
     # //// Figure 2 ////
     figure_2(overall_nb_dat=pd.read_csv(args.nbDataOverall))
     # //// Figure S1 ////
-    plot_tv_all(vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, ct_dat=ct_dat)
-    # //// Figure S2 ////
-    plot_shared_vars_all(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01, min_abundance=3)
-    # //// Figure S3 ////
-    plot_var_abundance(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01)
-    # //// Figure S4 ////
     plot_nb_by_pair(nb_dat=nb_dat, family_dat=family_dat)
+    # //// Figure S2 ////
+    plot_tv_all(vcf_dat=realign_vcf_dat, transmission_pairs=transmission_pairs, ct_dat=ct_dat)
+    # //// Figure S3 ////
+    plot_shared_vars_all(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01, min_abundance=3)
+    # //// Figure S4 ////
+    plot_var_abundance(vcf_dat=vcf_dat, transmission_pairs=transmission_pairs, min_af=0.01)
+    
 
 
 if __name__ == "__main__":
