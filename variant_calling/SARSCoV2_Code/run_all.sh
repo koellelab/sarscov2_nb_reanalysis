@@ -29,7 +29,7 @@ SGE_Batch -c "bash SARSCoV2_Code/generate_fastq.sh" -r generate_fastq -q koelle@
 
 # gets reference sequences to generate reference fasta files
 awk -F, '{print $1}' data/donor_recipient_files.csv > data/donor_samples.csv
-sort -u data/donor_samples.csv -o data/donor_samples.csv
+sort -u data/donor_samples.csv -o data/donor_samples.csvi
 while IFS="" read -r p || [ -n "$p" ]
 do 
 	scp data/seq/${p}/${p}_ref.fasta  data/ref/${p}_ref.fasta    
@@ -59,6 +59,7 @@ do
 done < data/transmission_sample_realign_refs.csv > SARSCoV2_Code/batch_variants_donor.sh
 SGE_Array -c "SARSCoV2_Code/batch_variants_donor.sh" -b 12 --qsub_options="-q koelle@helens*"
 
-
+# re loop through everything to get coverage, lazy
+bash SARSCoV2_Code/get_cov.sh
 
 
